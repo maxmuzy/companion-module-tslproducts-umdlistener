@@ -200,8 +200,6 @@ function parseTSL31Packet(self, buffer) {
         processTSLTallyObj(self, tallyObj)
 }
 
-const TALLY_COLOR_NAMES = ['OFF', 'RED', 'GREEN', 'AMBER']
-
 function parseTSL4Packet(self, buffer) {
         if (buffer.length < 18) {
                 self.log('warn', 'Received TSL 4.0 packet is too short (less than 18 bytes).')
@@ -460,6 +458,7 @@ function processTSLTallyObj(self, tally) {
 
                 self.initVariables()
                 self.initFeedbacks()
+                self.initPresets()
         }
 
         self.updateStatus(InstanceStatus.Ok)
