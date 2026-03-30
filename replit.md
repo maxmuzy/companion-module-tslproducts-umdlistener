@@ -36,6 +36,8 @@ This module is intended to run as a child process inside Bitfocus Companion usin
 
 ## Architecture Notes
 
-- The module uses TSL protocols 3.1 and 5.0 for tally data
+- The module supports TSL protocols 3.1, 4.0, and 5.0 for tally data
+- V4.0 extends V3.1 with color tally info (OFF/RED/GREEN/AMBER) for LH, Text, and RH tallies on Display L and Display R
+- V4.0 includes checksum validation and XDATA parsing per the TSL UMD spec
 - It opens UDP or TCP listeners on a configured port
 - Discovered tallies are stored in `this.TALLIES` and exposed as Companion variables/feedbacks
