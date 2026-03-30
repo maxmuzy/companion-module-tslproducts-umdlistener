@@ -284,7 +284,9 @@ function parseTSL4Packet(self, buffer) {
                 rh_tally_r,
         }
 
-        console.log('Parsed TSL 4.0 packet:', tallyObj)
+        if (self.config.verbose) {
+                console.log('Parsed TSL 4.0 packet:', tallyObj)
+        }
 
         processTSLTallyObj(self, tallyObj)
 }
