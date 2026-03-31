@@ -493,6 +493,7 @@ function parseRossVisionPacket(self, buffer) {
                         self.ROSS_MLE_STATE[mleName].key2Active = key2Active
                         self.ROSS_MLE_STATE[mleName].key3Active = key3Active
                         self.ROSS_MLE_STATE[mleName].key4Active = key4Active
+				self.ROSS_MLE_STATE[mleName].keyActiveMask = keyStatusByte
 
                         if (self.config.verbose) {
                                 const keySummary = [1, 2, 3, 4].map((k) => {
@@ -502,7 +503,7 @@ function parseRossVisionPacket(self, buffer) {
                                 }).join(', ')
                                 self.log(
                                         'info',
-                                        `Ross Vision ${mleName.toUpperCase()} (block@${blockStart}): PGM=${fmt(pgm)} PVW=${fmt(pvw)} | ${keySummary}`
+                                        `Ross Vision ${mleName.toUpperCase()} (block@${blockStart}): PGM=${fmt(pgm)} PVW=${fmt(pvw)} | ${keySummary} | keyMask=0x${keyStatusByte.toString(16).padStart(2, '0')}`
                                 )
                         }
                 }
