@@ -382,6 +382,18 @@ function parseTSL5Packet(self, data) {
         processTSLTallyObj(self, newTallyObj)
 }
 
+function findNextRossHeader(buffer, startIndex) {
+        for (let i = startIndex; i < buffer.length - 1; i++) {
+                if (
+                        (buffer[i] === 0xc1 && buffer[i + 1] === 0xc1) ||
+                        (buffer[i] === 0xb1 && buffer[i + 1] === 0xb1)
+                ) {
+                        return i
+                }
+        }
+        return -1
+}
+
 function processRossVisionTCPData(self, data) {
         if (!self.ROSS_TCP_BUFFER) {
                 self.ROSS_TCP_BUFFER = Buffer.alloc(0)
@@ -390,21 +402,38 @@ function processRossVisionTCPData(self, data) {
         self.ROSS_TCP_BUFFER = Buffer.concat([self.ROSS_TCP_BUFFER, data])
 
         while (self.ROSS_TCP_BUFFER.length >= 2) {
-                const header = self.ROSS_TCP_BUFFER[0]
+                const b0 = self.ROSS_TCP_BUFFER[0]
+                const b1 = self.ROSS_TCP_BUFFER[1]
 
-                if (header === 0xc1 && self.ROSS_TCP_BUFFER[1] === 0xc1) {
+                if (b0 === 0xc1 && b1 === 0xc1) {
                         if (self.ROSS_TCP_BUFFER.length < 21) break
                         const packet = self.ROSS_TCP_BUFFER.slice(0, 21)
                         self.ROSS_TCP_BUFFER = self.ROSS_TCP_BUFFER.slice(21)
                         parseRossVisionPacket(self, packet)
-                } else if (header === 0xb1 && self.ROSS_TCP_BUFFER[1] === 0xb1) {
-                        if (self.ROSS_TCP_BUFFER.length < 225) break
-                        const packet = self.ROSS_TCP_BUFFER.slice(0, 225)
-                        self.ROSS_TCP_BUFFER = self.ROSS_TCP_BUFFER.slice(225)
-                        parseRossVisionPacket(self, packet)
+                } else if (b0 === 0xb1 && b1 === 0xb1) {
+                        let nextHeader = findNextRossHeader(self.ROSS_TCP_BUFFER, 2)
+
+                        if (nextHeader === -1) {
+                                if (self.ROSS_TCP_BUFFER.length > 300) {
+                                        self.ROSS_TCP_BUFFER = self.ROSS_TCP_BUFFER.slice(1)
+                                        continue
+                                }
+                                break
+                        }
+
+                        const packet = self.ROSS_TCP_BUFFER.slice(0, nextHeader)
+                        self.ROSS_TCP_BUFFER = self.ROSS_TCP_BUFFER.slice(nextHeader)
+
+                        if (packet.length === 225) {
+                                parseRossVisionPacket(self, packet)
+                        } else {
+                                if (self.config.verbose) {
+                                        self.log('debug', `Ross Vision TCP: Skipping B1 packet of ${packet.length} bytes`)
+                                }
+                        }
                 } else {
                         if (self.config.verbose) {
-                                self.log('debug', `Ross Vision TCP: Skipping unknown byte 0x${header.toString(16)}`)
+                                self.log('debug', `Ross Vision TCP: Skipping unknown byte 0x${b0.toString(16)}`)
                         }
                         self.ROSS_TCP_BUFFER = self.ROSS_TCP_BUFFER.slice(1)
                 }
@@ -425,48 +454,18 @@ function parseRossVisionPacket(self, buffer) {
                 self.ROSS_LABELS = self.ROSS_LABELS || {}
                 self.ROSS_LABELS[address] = label
 
-                let existing = self.TALLIES.find((t) => t.address === address)
-                if (existing) {
-                        if (existing.label !== label) {
-                                existing.label = label
-                                let choice = self.CHOICES_TALLYADDRESSES.find((c) => c.id === address)
-                                if (choice) {
-                                        choice.label = address + ' (' + label + ')'
-                                }
-                                self.initVariables()
-                                self.initFeedbacks()
-                                self.initPresets()
-                                self.checkVariables()
-                        }
-                } else {
-                        let tallyObj = {
-                                address: address,
-                                tally1: 0,
-                                tally2: 0,
-                                tally3: 0,
-                                tally4: 0,
-                                label: label,
-                        }
-                        self.TALLIES.push(tallyObj)
-                        self.TALLIES.sort((a, b) => a.address - b.address)
+                const existing = self.TALLIES.find((t) => t.address === address)
+                const currentTally1 = existing ? existing.tally1 : 0
+                const currentTally2 = existing ? existing.tally2 : 0
 
-                        if (self.CHOICES_TALLYADDRESSES.length > 0 && self.CHOICES_TALLYADDRESSES[0].id === -1) {
-                                self.CHOICES_TALLYADDRESSES = []
-                        }
-                        self.CHOICES_TALLYADDRESSES.push({
-                                id: address,
-                                label: address + ' (' + label + ')',
-                        })
-                        self.CHOICES_TALLYADDRESSES.sort((a, b) => a.id - b.id)
-
-                        self.initVariables()
-                        self.initFeedbacks()
-                        self.initPresets()
-                        self.checkVariables()
-                }
-
-                self.updateStatus(InstanceStatus.Ok)
-                self.setVariableValues({ module_state: 'Tally Data Received.' })
+                processTSLTallyObj(self, {
+                        address: address,
+                        tally1: currentTally1,
+                        tally2: currentTally2,
+                        tally3: 0,
+                        tally4: 0,
+                        label: label,
+                })
         } else if (len === 225 && buffer[0] === 0xb1 && buffer[1] === 0xb1) {
                 self.ROSS_MLE_STATE = self.ROSS_MLE_STATE || {
                         mle1: { pgm: 0, pvw: 0 },
@@ -498,28 +497,36 @@ function parseRossVisionPacket(self, buffer) {
                 const pgmSources = new Set([mle1_pgm, mle2_pgm, mle3_pgm])
                 const pvwSources = new Set([mle1_pvw, mle2_pvw, mle3_pvw])
 
-                let changed = false
+                const allAddresses = new Set()
+                for (const t of self.TALLIES) {
+                        allAddresses.add(t.address)
+                }
+                pgmSources.forEach((a) => allAddresses.add(a))
+                pvwSources.forEach((a) => allAddresses.add(a))
 
-                for (let i = 0; i < self.TALLIES.length; i++) {
-                        const addr = self.TALLIES[i].address
+                for (const addr of allAddresses) {
                         const newTally2 = pgmSources.has(addr) ? 1 : 0
                         const newTally1 = pvwSources.has(addr) ? 1 : 0
 
-                        if (self.TALLIES[i].tally1 !== newTally1 || self.TALLIES[i].tally2 !== newTally2) {
-                                self.TALLIES[i].tally1 = newTally1
-                                self.TALLIES[i].tally2 = newTally2
-                                changed = true
+                        const existing = self.TALLIES.find((t) => t.address === addr)
+                        if (existing && existing.tally1 === newTally1 && existing.tally2 === newTally2) {
+                                continue
                         }
+
+                        const labels = self.ROSS_LABELS || {}
+                        const label = labels[addr] || `Source ${addr}`
+
+                        processTSLTallyObj(self, {
+                                address: addr,
+                                tally1: newTally1,
+                                tally2: newTally2,
+                                tally3: 0,
+                                tally4: 0,
+                                label: label,
+                        })
                 }
 
                 self.checkVariables()
-
-                if (changed) {
-                        self.checkFeedbacks()
-                }
-
-                self.updateStatus(InstanceStatus.Ok)
-                self.setVariableValues({ module_state: 'Tally Data Received.' })
         } else {
                 if (self.config.verbose) {
                         self.log('debug', `Ross Vision: Ignoring packet of ${len} bytes`)
