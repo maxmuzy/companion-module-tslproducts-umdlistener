@@ -123,7 +123,7 @@ module.exports = {
 		}
 
 		if (self.config.protocol === 'rossvision') {
-			const mleCount = parseInt(self.config.ross_mle_count) || 3
+			const mleCount = Math.max(1, Math.min(3, parseInt(self.config.ross_mle_count) || 3))
 			const mleBusChoices = []
 			for (let i = 1; i <= mleCount; i++) {
 				mleBusChoices.push({ id: `mle${i}_pgm`, label: `MLE${i} PGM` })

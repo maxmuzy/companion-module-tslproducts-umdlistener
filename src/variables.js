@@ -97,7 +97,7 @@ module.exports = {
 		}
 
 		if (self.config.protocol == 'rossvision') {
-			const mleCount = parseInt(self.config.ross_mle_count) || 3
+			const mleCount = Math.max(1, Math.min(3, parseInt(self.config.ross_mle_count) || 3))
 			for (let i = 1; i <= mleCount; i++) {
 				const mle = `mle${i}`
 				const MLE = mle.toUpperCase()
@@ -155,7 +155,7 @@ module.exports = {
 
 			if (self.config.protocol == 'rossvision' && self.ROSS_MLE_STATE) {
 				const labels = self.ROSS_LABELS || {}
-				const mleCount = parseInt(self.config.ross_mle_count) || 3
+				const mleCount = Math.max(1, Math.min(3, parseInt(self.config.ross_mle_count) || 3))
 				for (let i = 1; i <= mleCount; i++) {
 					const mle = `mle${i}`
 					const state = self.ROSS_MLE_STATE[mle]
