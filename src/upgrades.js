@@ -16,7 +16,8 @@ module.exports = [
 		if (props.config) {
 			const config = props.config
 			if (config.ross_mle1_addr !== undefined && config.ross_mle_base_addr === undefined) {
-				config.ross_mle_base_addr = parseInt(config.ross_mle1_addr) || 99
+				const parsed = parseInt(config.ross_mle1_addr)
+				config.ross_mle_base_addr = isNaN(parsed) ? 99 : parsed
 				config.ross_mle_count = 3
 				delete config.ross_mle1_addr
 				delete config.ross_mle2_addr
