@@ -31,11 +31,7 @@ class TSLProductsUMDListenerInstance extends InstanceBase {
                 this.TALLIES = []
                 this.CHOICES_TALLYADDRESSES = [{ id: -1, label: 'No tally data received yet...' }]
 
-                this.ROSS_MLE_STATE = {
-                        mle1: { pgm: 0, pvw: 0 },
-                        mle2: { pgm: 0, pvw: 0 },
-                        mle3: { pgm: 0, pvw: 0 },
-                }
+                this.ROSS_MLE_STATE = {}
                 this.ROSS_LABELS = {}
         }
 

@@ -382,12 +382,32 @@ function parseTSL5Packet(self, data) {
         processTSLTallyObj(self, newTallyObj)
 }
 
+function getRossMleCount(self) {
+        return parseInt(self.config.ross_mle_count) || 3
+}
+
+function getRossExpectedB1Size(self) {
+        return 74 + (getRossMleCount(self) * 25) + 76
+}
+
+function getRossMleAddrMap(self) {
+        const count = getRossMleCount(self)
+        const base = parseInt(self.config.ross_mle_base_addr) || 99
+        const map = {}
+        for (let i = 1; i <= count; i++) {
+                map[`mle${i}`] = base + (i - 1) * 6
+        }
+        return map
+}
+
 function processRossVisionTCPData(self, data) {
         if (!self.ROSS_TCP_BUFFER) {
                 self.ROSS_TCP_BUFFER = Buffer.alloc(0)
         }
 
         self.ROSS_TCP_BUFFER = Buffer.concat([self.ROSS_TCP_BUFFER, data])
+
+        const expectedB1Size = getRossExpectedB1Size(self)
 
         while (self.ROSS_TCP_BUFFER.length >= 2) {
                 const b0 = self.ROSS_TCP_BUFFER[0]
@@ -399,9 +419,9 @@ function processRossVisionTCPData(self, data) {
                         self.ROSS_TCP_BUFFER = self.ROSS_TCP_BUFFER.slice(21)
                         parseRossVisionPacket(self, packet)
                 } else if (b0 === 0xb1 && b1 === 0xb1) {
-                        if (self.ROSS_TCP_BUFFER.length < 225) break
-                        const packet = self.ROSS_TCP_BUFFER.slice(0, 225)
-                        self.ROSS_TCP_BUFFER = self.ROSS_TCP_BUFFER.slice(225)
+                        if (self.ROSS_TCP_BUFFER.length < expectedB1Size) break
+                        const packet = self.ROSS_TCP_BUFFER.slice(0, expectedB1Size)
+                        self.ROSS_TCP_BUFFER = self.ROSS_TCP_BUFFER.slice(expectedB1Size)
                         parseRossVisionPacket(self, packet)
                 } else {
                         if (self.config.verbose) {
@@ -414,6 +434,8 @@ function processRossVisionTCPData(self, data) {
 
 function parseRossVisionPacket(self, buffer) {
         const len = buffer.length
+        const mleCount = getRossMleCount(self)
+        const expectedB1Size = getRossExpectedB1Size(self)
 
         if (len === 21 && buffer[0] === 0xc1 && buffer[1] === 0xc1) {
                 const address = buffer.readUInt8(2)
@@ -438,50 +460,67 @@ function parseRossVisionPacket(self, buffer) {
                         tally4: 0,
                         label: label,
                 })
-        } else if (len === 225 && buffer[0] === 0xb1 && buffer[1] === 0xb1) {
-                self.ROSS_MLE_STATE = self.ROSS_MLE_STATE || {
-                        mle1: { pgm: 0, pvw: 0 },
-                        mle2: { pgm: 0, pvw: 0 },
-                        mle3: { pgm: 0, pvw: 0 },
-                }
-
-                const mle3_pgm = buffer.readUInt8(90)
-                const mle3_pvw = buffer.readUInt8(92)
-                const mle2_pgm = buffer.readUInt8(115)
-                const mle2_pvw = buffer.readUInt8(117)
-                const mle1_pgm = buffer.readUInt8(140)
-                const mle1_pvw = buffer.readUInt8(142)
-
-                self.ROSS_MLE_STATE.mle1.pgm = mle1_pgm
-                self.ROSS_MLE_STATE.mle1.pvw = mle1_pvw
-                self.ROSS_MLE_STATE.mle2.pgm = mle2_pgm
-                self.ROSS_MLE_STATE.mle2.pvw = mle2_pvw
-                self.ROSS_MLE_STATE.mle3.pgm = mle3_pgm
-                self.ROSS_MLE_STATE.mle3.pvw = mle3_pvw
+        } else if (len === expectedB1Size && buffer[0] === 0xb1 && buffer[1] === 0xb1) {
+                initRossMleState(self)
 
                 const labels = self.ROSS_LABELS || {}
+                const fmt = (addr) => labels[addr] ? `${addr} (${labels[addr]})` : `${addr}`
 
-                if (self.config.verbose) {
-                        const fmt = (addr) => labels[addr] ? `${addr} (${labels[addr]})` : `${addr}`
-                        self.log(
-                                'info',
-                                `Ross Vision Crosspoints: MLE1 PGM=${fmt(mle1_pgm)} PVW=${fmt(mle1_pvw)} | MLE2 PGM=${fmt(mle2_pgm)} PVW=${fmt(mle2_pvw)} | MLE3 PGM=${fmt(mle3_pgm)} PVW=${fmt(mle3_pvw)}`
-                        )
+                for (let i = 1; i <= mleCount; i++) {
+                        const blockStart = 74 + (mleCount - i) * 25
+                        const mleName = `mle${i}`
+
+                        const pgm = buffer.readUInt8(blockStart + 16)
+                        const pvw = buffer.readUInt8(blockStart + 18)
+                        const keyStatusByte = buffer.readUInt8(blockStart + 3)
+                        const key1Src = buffer.readUInt8(blockStart + 0)
+                        const key2Src = buffer.readUInt8(blockStart + 4)
+                        const key3Src = buffer.readUInt8(blockStart + 8)
+                        const key4Src = buffer.readUInt8(blockStart + 12)
+
+                        const key1Active = (keyStatusByte & 0x10) !== 0
+                        const key2Active = (keyStatusByte & 0x20) !== 0
+                        const key3Active = (keyStatusByte & 0x40) !== 0
+                        const key4Active = (keyStatusByte & 0x80) !== 0
+
+                        self.ROSS_MLE_STATE[mleName].pgm = pgm
+                        self.ROSS_MLE_STATE[mleName].pvw = pvw
+                        self.ROSS_MLE_STATE[mleName].key1Src = key1Src
+                        self.ROSS_MLE_STATE[mleName].key2Src = key2Src
+                        self.ROSS_MLE_STATE[mleName].key3Src = key3Src
+                        self.ROSS_MLE_STATE[mleName].key4Src = key4Src
+                        self.ROSS_MLE_STATE[mleName].key1Active = key1Active
+                        self.ROSS_MLE_STATE[mleName].key2Active = key2Active
+                        self.ROSS_MLE_STATE[mleName].key3Active = key3Active
+                        self.ROSS_MLE_STATE[mleName].key4Active = key4Active
+
+                        if (self.config.verbose) {
+                                const keySummary = [1, 2, 3, 4].map((k) => {
+                                        const active = self.ROSS_MLE_STATE[mleName][`key${k}Active`]
+                                        const src = self.ROSS_MLE_STATE[mleName][`key${k}Src`]
+                                        return `KEY${k}=${fmt(src)}${active ? ' [ON]' : ''}`
+                                }).join(', ')
+                                self.log(
+                                        'info',
+                                        `Ross Vision ${mleName.toUpperCase()} (block@${blockStart}): PGM=${fmt(pgm)} PVW=${fmt(pvw)} | ${keySummary}`
+                                )
+                        }
                 }
 
                 const mainMle = self.config.ross_main_mle || 'mle1'
                 const mainState = self.ROSS_MLE_STATE[mainMle]
-
-                const mleAddrMap = {
-                        mle1: parseInt(self.config.ross_mle1_addr) || 0,
-                        mle2: parseInt(self.config.ross_mle2_addr) || 0,
-                        mle3: parseInt(self.config.ross_mle3_addr) || 0,
+                if (!mainState) {
+                        self.log('warn', `Ross Vision: Main MLE "${mainMle}" not found in state (configured ${mleCount} MLEs)`)
+                        return
                 }
 
+                const mleAddrMap = getRossMleAddrMap(self)
+
                 if (self.config.verbose) {
+                        const addrList = Object.entries(mleAddrMap).map(([m, a]) => `${m.toUpperCase()}=${a}`).join(', ')
                         self.log(
                                 'info',
-                                `Ross Vision Config: Main MLE=${mainMle.toUpperCase()} | MLE source addresses: MLE1=${mleAddrMap.mle1}, MLE2=${mleAddrMap.mle2}, MLE3=${mleAddrMap.mle3}`
+                                `Ross Vision Config: Main=${mainMle.toUpperCase()} | Source addresses: ${addrList}`
                         )
                 }
 
@@ -491,45 +530,62 @@ function parseRossVisionPacket(self, buffer) {
                 pgmCascade.add(mainState.pgm)
                 pvwCascade.add(mainState.pvw)
 
+                for (let k = 1; k <= 4; k++) {
+                        if (mainState[`key${k}Active`]) {
+                                const keySrc = mainState[`key${k}Src`]
+                                pgmCascade.add(keySrc)
+                                if (self.config.verbose) {
+                                        self.log('info', `Ross Vision Cascade: ${mainMle.toUpperCase()} KEY${k}=${fmt(keySrc)} [ON] -> adding to PGM tally`)
+                                }
+                        }
+                }
+
                 if (self.config.verbose) {
-                        const fmtAddr = (addr) => labels[addr] ? `${addr} (${labels[addr]})` : `${addr}`
                         self.log(
                                 'info',
-                                `Ross Vision Cascade: ${mainMle.toUpperCase()} direct -> PGM=${fmtAddr(mainState.pgm)}, PVW=${fmtAddr(mainState.pvw)}`
+                                `Ross Vision Cascade: ${mainMle.toUpperCase()} direct -> PGM=${fmt(mainState.pgm)}, PVW=${fmt(mainState.pvw)}`
                         )
                 }
 
-                const mleNames = ['mle1', 'mle2', 'mle3']
-                for (const mle of mleNames) {
+                for (let i = 1; i <= mleCount; i++) {
+                        const mle = `mle${i}`
                         if (mle === mainMle) continue
                         const mleAddr = mleAddrMap[mle]
-                        if (mleAddr === 0) {
-                                if (self.config.verbose) {
-                                        self.log('debug', `Ross Vision Cascade: ${mle.toUpperCase()} skipped (source address not configured)`)
-                                }
-                                continue
-                        }
 
                         const secState = self.ROSS_MLE_STATE[mle]
 
                         if (mainState.pgm === mleAddr) {
                                 pgmCascade.add(secState.pgm)
+                                for (let k = 1; k <= 4; k++) {
+                                        if (secState[`key${k}Active`]) {
+                                                pgmCascade.add(secState[`key${k}Src`])
+                                                if (self.config.verbose) {
+                                                        self.log('info', `Ross Vision Cascade: ${mle.toUpperCase()} KEY${k}=${fmt(secState[`key${k}Src`])} [ON] -> adding to PGM tally (via cascade)`)
+                                                }
+                                        }
+                                }
                                 if (self.config.verbose) {
-                                        const fmtAddr = (addr) => labels[addr] ? `${addr} (${labels[addr]})` : `${addr}`
                                         self.log(
                                                 'info',
-                                                `Ross Vision Cascade: ${mle.toUpperCase()} (addr=${mleAddr}) is on ${mainMle.toUpperCase()} PGM -> adding ${mle.toUpperCase()} PGM=${fmtAddr(secState.pgm)} to PGM tally`
+                                                `Ross Vision Cascade: ${mle.toUpperCase()} (addr=${mleAddr}) is on ${mainMle.toUpperCase()} PGM -> adding PGM=${fmt(secState.pgm)} to PGM tally`
                                         )
                                 }
                         }
 
                         if (mainState.pvw === mleAddr) {
                                 pvwCascade.add(secState.pvw)
+                                for (let k = 1; k <= 4; k++) {
+                                        if (secState[`key${k}Active`]) {
+                                                pvwCascade.add(secState[`key${k}Src`])
+                                                if (self.config.verbose) {
+                                                        self.log('info', `Ross Vision Cascade: ${mle.toUpperCase()} KEY${k}=${fmt(secState[`key${k}Src`])} [ON] -> adding to PVW tally (via cascade)`)
+                                                }
+                                        }
+                                }
                                 if (self.config.verbose) {
-                                        const fmtAddr = (addr) => labels[addr] ? `${addr} (${labels[addr]})` : `${addr}`
                                         self.log(
                                                 'info',
-                                                `Ross Vision Cascade: ${mle.toUpperCase()} (addr=${mleAddr}) is on ${mainMle.toUpperCase()} PVW -> adding ${mle.toUpperCase()} PVW=${fmtAddr(secState.pvw)} to PVW tally`
+                                                `Ross Vision Cascade: ${mle.toUpperCase()} (addr=${mleAddr}) is on ${mainMle.toUpperCase()} PVW -> adding PVW=${fmt(secState.pvw)} to PVW tally`
                                         )
                                 }
                         }
@@ -548,7 +604,7 @@ function parseRossVisionPacket(self, buffer) {
                 pvwCascade.delete(0)
 
                 if (self.config.verbose) {
-                        const fmtSet = (s) => [...s].map((a) => labels[a] ? `${a} (${labels[a]})` : `${a}`).join(', ')
+                        const fmtSet = (s) => [...s].map((a) => fmt(a)).join(', ')
                         self.log(
                                 'info',
                                 `Ross Vision Tally Result: PGM=[${fmtSet(pgmCascade)}] | PVW=[${fmtSet(pvwCascade)}]`
@@ -596,7 +652,24 @@ function parseRossVisionPacket(self, buffer) {
                 self.checkFeedbacks()
         } else {
                 if (self.config.verbose) {
-                        self.log('debug', `Ross Vision: Ignoring packet of ${len} bytes (header: 0x${buffer[0].toString(16)} 0x${buffer[1].toString(16)})`)
+                        self.log('debug', `Ross Vision: Ignoring packet of ${len} bytes (expected B1=${expectedB1Size}, header: 0x${buffer[0].toString(16)} 0x${buffer[1].toString(16)})`)
+                }
+        }
+}
+
+function initRossMleState(self) {
+        const count = getRossMleCount(self)
+        if (!self.ROSS_MLE_STATE) {
+                self.ROSS_MLE_STATE = {}
+        }
+        for (let i = 1; i <= count; i++) {
+                const mleName = `mle${i}`
+                if (!self.ROSS_MLE_STATE[mleName]) {
+                        self.ROSS_MLE_STATE[mleName] = {
+                                pgm: 0, pvw: 0,
+                                key1Src: 0, key2Src: 0, key3Src: 0, key4Src: 0,
+                                key1Active: false, key2Active: false, key3Active: false, key4Active: false,
+                        }
                 }
         }
 }

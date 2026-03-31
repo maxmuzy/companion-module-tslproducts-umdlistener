@@ -39,7 +39,16 @@ This module is intended to run as a child process inside Bitfocus Companion usin
 - The module supports TSL protocols 3.1, 4.0, 5.0, and Ross Vision for tally data
 - V4.0 extends V3.1 with color tally info (OFF/RED/GREEN/AMBER) for LH, Text, and RH tallies on Display L and Display R
 - V4.0 includes checksum validation and XDATA parsing per the TSL UMD spec
-- Ross Vision protocol uses proprietary binary packets over UDP (port 9800): 21-byte label packets (0xC1 header) and 225-byte crosspoint status packets (0xB1 header). Tally uses cascading logic: a configurable "Main MLE" drives tally output. Sources get PGM/PVW tally if they're directly on the Main MLE, or if they're active in a secondary MLE whose source address appears on the Main MLE's PGM/PVW. Config fields: Main MLE selector, MLE1/MLE2/MLE3 source addresses. A "Ross MLE Source Match" feedback allows comparing individual MLE bus crosspoints against specific source addresses. TCP transport includes reassembly buffering.
+- Ross Vision protocol uses proprietary binary packets over UDP (port 9800):
+  - 21-byte label packets (0xC1 header): address at byte 2, label at bytes 3-20
+  - B1 status packets: size depends on MLE count — 74 + (N × 25) + 76 bytes (175/200/225 for 1-3 MLEs)
+  - Each MLE occupies a 25-byte block starting at byte 74, in reverse MLE order (highest MLE first)
+  - MLE block internal offsets: +0=KEY1 src, +3=KEY status bitmask, +4=KEY2 src, +8=KEY3 src, +12=KEY4 src, +16=PGM, +18=PVW
+  - KEY status bitmask: bit4=KEY1, bit5=KEY2, bit6=KEY3, bit7=KEY4
+  - Config: Number of MLEs (1-3), MLE Base Source Address (default 99, auto-calculates MLE_N = base + (N-1)*6), Main MLE selector
+  - Cascading tally: Main MLE's PGM/PVW sources get direct tally; active KEY sources on Main MLE contribute to PGM tally; secondary MLEs cascade when their source address is on Main MLE's PGM/PVW (including their active KEY sources)
+  - "Ross MLE Source Match" feedback compares MLE bus crosspoints against source addresses
+  - TCP transport includes reassembly buffering with dynamic B1 packet size
 - It opens UDP or TCP listeners on a configured port
 - Discovered tallies are stored in `this.TALLIES` and exposed as Companion variables/feedbacks
-- Ross Vision state is stored in `this.ROSS_MLE_STATE` (crosspoints per MLE) and `this.ROSS_LABELS` (source labels by address)
+- Ross Vision state is stored in `this.ROSS_MLE_STATE` (per-MLE: pgm, pvw, key1-4 sources, key1-4 active) and `this.ROSS_LABELS` (source labels by address)
