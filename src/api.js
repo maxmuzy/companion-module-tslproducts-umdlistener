@@ -383,7 +383,7 @@ function parseTSL5Packet(self, data) {
 }
 
 function getRossMleCount(self) {
-        return parseInt(self.config.ross_mle_count) || 3
+        const count = parseInt(self.config.ross_mle_count) || 3; return Math.max(1, Math.min(3, count))
 }
 
 function getRossExpectedB1Size(self) {
@@ -676,6 +676,9 @@ function initRossMleState(self) {
                         }
                 }
         }
+	for (let i = count + 1; i <= 3; i++) {
+		delete self.ROSS_MLE_STATE[`mle${i}`]
+	}
 }
 
 function processTSLTallyObj(self, tally) {
