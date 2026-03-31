@@ -12,69 +12,76 @@ const presets = require('./src/presets')
 const api = require('./src/api')
 
 class TSLProductsUMDListenerInstance extends InstanceBase {
-	constructor(internal) {
-		super(internal)
+        constructor(internal) {
+                super(internal)
 
-		// Assign the methods from the listed files to this class
-		Object.assign(this, {
-			...config,
-			...actions,
-			...feedbacks,
-			...variables,
-			...presets,
-			...api,
-		})
+                // Assign the methods from the listed files to this class
+                Object.assign(this, {
+                        ...config,
+                        ...actions,
+                        ...feedbacks,
+                        ...variables,
+                        ...presets,
+                        ...api,
+                })
 
-		this.oldPortType = ''
+                this.oldPortType = ''
 
-		this.SERVER = undefined
-		this.TALLIES = []
-		this.CHOICES_TALLYADDRESSES = [{ id: -1, label: 'No tally data received yet...' }]
-	}
+                this.SERVER = undefined
+                this.TALLIES = []
+                this.CHOICES_TALLYADDRESSES = [{ id: -1, label: 'No tally data received yet...' }]
 
-	async destroy() {
-		let self = this
+                this.ROSS_MLE_STATE = {
+                        mle1: { pgm: 0, pvw: 0 },
+                        mle2: { pgm: 0, pvw: 0 },
+                        mle3: { pgm: 0, pvw: 0 },
+                }
+                this.ROSS_LABELS = {}
+        }
 
-		self.closePort()
-	}
+        async destroy() {
+                let self = this
 
-	async init(config) {
-		this.configUpdated(config)
-	}
+                self.closePort()
+        }
 
-	async configUpdated(config) {
-		this.config = config
+        async init(config) {
+                this.configUpdated(config)
+        }
 
-		if (config) {
-			this.oldPortType = this.config.porttype
-			this.config = config
-		}
+        async configUpdated(config) {
+                this.config = config
 
-		if (this.SERVER !== undefined) {
-			//close out any open ports and re-init
-			this.closePort()
-		}
+                if (config) {
+                        this.oldPortType = this.config.porttype
+                        this.config = config
+                }
 
-		// Quickly check if certain config values are present and continue setup
-		if (this.config.port) {
-			//Open the listening port
-			this.openPort()
+                if (this.SERVER !== undefined) {
+                        //close out any open ports and re-init
+                        this.closePort()
+                }
 
-			// Init the Actions
-			this.initActions()
-			this.initVariables()
-			this.initFeedbacks()
-			this.initPresets()
+                // Quickly check if certain config values are present and continue setup
+                if (this.config.port) {
+                        //Open the listening port
+                        this.openPort()
 
-			this.checkVariables()
-			this.checkFeedbacks()
+                        // Init the Actions
+                        this.initActions()
+                        this.initVariables()
+                        this.initFeedbacks()
+                        this.initPresets()
 
-			// Set Status to Connecting
-			this.updateStatus(InstanceStatus.Connecting)
+                        this.checkVariables()
+                        this.checkFeedbacks()
 
-			this.setVariableValues({ module_state: 'Waiting for Data...' })
-		}
-	}
+                        // Set Status to Connecting
+                        this.updateStatus(InstanceStatus.Connecting)
+
+                        this.setVariableValues({ module_state: 'Waiting for Data...' })
+                }
+        }
 }
 
 runEntrypoint(TSLProductsUMDListenerInstance, UpgradeScripts)

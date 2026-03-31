@@ -96,6 +96,15 @@ module.exports = {
                         }
                 }
 
+                if (self.config.protocol == 'rossvision') {
+                        variables.push({ name: 'MLE1 PGM Source', variableId: 'mle1_pgm_source' })
+                        variables.push({ name: 'MLE1 PVW Source', variableId: 'mle1_pvw_source' })
+                        variables.push({ name: 'MLE2 PGM Source', variableId: 'mle2_pgm_source' })
+                        variables.push({ name: 'MLE2 PVW Source', variableId: 'mle2_pvw_source' })
+                        variables.push({ name: 'MLE3 PGM Source', variableId: 'mle3_pgm_source' })
+                        variables.push({ name: 'MLE3 PVW Source', variableId: 'mle3_pvw_source' })
+                }
+
                 self.setVariableDefinitions(variables)
         },
 
@@ -136,6 +145,19 @@ module.exports = {
                                         variableObj[`tally_${self.TALLIES[i].address}_lh_tally_r`] = TALLY_COLOR_NAMES[self.TALLIES[i].lh_tally_r] || 'OFF'
                                         variableObj[`tally_${self.TALLIES[i].address}_text_tally_r`] = TALLY_COLOR_NAMES[self.TALLIES[i].text_tally_r] || 'OFF'
                                         variableObj[`tally_${self.TALLIES[i].address}_rh_tally_r`] = TALLY_COLOR_NAMES[self.TALLIES[i].rh_tally_r] || 'OFF'
+                                }
+                        }
+
+                        if (self.config.protocol == 'rossvision' && self.ROSS_MLE_STATE) {
+                                const labels = self.ROSS_LABELS || {}
+                                const mleNames = ['mle1', 'mle2', 'mle3']
+                                for (const mle of mleNames) {
+                                        const pgmAddr = self.ROSS_MLE_STATE[mle].pgm
+                                        const pvwAddr = self.ROSS_MLE_STATE[mle].pvw
+                                        const pgmLabel = labels[pgmAddr] ? `${pgmAddr} (${labels[pgmAddr]})` : `${pgmAddr}`
+                                        const pvwLabel = labels[pvwAddr] ? `${pvwAddr} (${labels[pvwAddr]})` : `${pvwAddr}`
+                                        variableObj[`${mle}_pgm_source`] = pgmLabel
+                                        variableObj[`${mle}_pvw_source`] = pvwLabel
                                 }
                         }
 
