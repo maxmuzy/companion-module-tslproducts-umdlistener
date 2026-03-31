@@ -382,18 +382,6 @@ function parseTSL5Packet(self, data) {
         processTSLTallyObj(self, newTallyObj)
 }
 
-function findNextRossHeader(buffer, startIndex) {
-        for (let i = startIndex; i < buffer.length - 1; i++) {
-                if (
-                        (buffer[i] === 0xc1 && buffer[i + 1] === 0xc1) ||
-                        (buffer[i] === 0xb1 && buffer[i + 1] === 0xb1)
-                ) {
-                        return i
-                }
-        }
-        return -1
-}
-
 function processRossVisionTCPData(self, data) {
         if (!self.ROSS_TCP_BUFFER) {
                 self.ROSS_TCP_BUFFER = Buffer.alloc(0)
