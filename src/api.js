@@ -459,10 +459,13 @@ function parseRossVisionPacket(self, buffer) {
                 self.ROSS_MLE_STATE.mle3.pgm = mle3_pgm
                 self.ROSS_MLE_STATE.mle3.pvw = mle3_pvw
 
+                const labels = self.ROSS_LABELS || {}
+
                 if (self.config.verbose) {
+                        const fmt = (addr) => labels[addr] ? `${addr} (${labels[addr]})` : `${addr}`
                         self.log(
                                 'info',
-                                `Ross Vision Status: MLE1 PGM=${mle1_pgm} PVW=${mle1_pvw}, MLE2 PGM=${mle2_pgm} PVW=${mle2_pvw}, MLE3 PGM=${mle3_pgm} PVW=${mle3_pvw}`
+                                `Ross Vision Crosspoints: MLE1 PGM=${fmt(mle1_pgm)} PVW=${fmt(mle1_pvw)} | MLE2 PGM=${fmt(mle2_pgm)} PVW=${fmt(mle2_pvw)} | MLE3 PGM=${fmt(mle3_pgm)} PVW=${fmt(mle3_pvw)}`
                         )
                 }
 
@@ -475,35 +478,80 @@ function parseRossVisionPacket(self, buffer) {
                         mle3: parseInt(self.config.ross_mle3_addr) || 0,
                 }
 
+                if (self.config.verbose) {
+                        self.log(
+                                'info',
+                                `Ross Vision Config: Main MLE=${mainMle.toUpperCase()} | MLE source addresses: MLE1=${mleAddrMap.mle1}, MLE2=${mleAddrMap.mle2}, MLE3=${mleAddrMap.mle3}`
+                        )
+                }
+
                 const pgmCascade = new Set()
                 const pvwCascade = new Set()
 
                 pgmCascade.add(mainState.pgm)
                 pvwCascade.add(mainState.pvw)
 
+                if (self.config.verbose) {
+                        const fmtAddr = (addr) => labels[addr] ? `${addr} (${labels[addr]})` : `${addr}`
+                        self.log(
+                                'info',
+                                `Ross Vision Cascade: ${mainMle.toUpperCase()} direct -> PGM=${fmtAddr(mainState.pgm)}, PVW=${fmtAddr(mainState.pvw)}`
+                        )
+                }
+
                 const mleNames = ['mle1', 'mle2', 'mle3']
                 for (const mle of mleNames) {
                         if (mle === mainMle) continue
                         const mleAddr = mleAddrMap[mle]
-                        if (mleAddr === 0) continue
+                        if (mleAddr === 0) {
+                                if (self.config.verbose) {
+                                        self.log('debug', `Ross Vision Cascade: ${mle.toUpperCase()} skipped (source address not configured)`)
+                                }
+                                continue
+                        }
 
                         const secState = self.ROSS_MLE_STATE[mle]
 
                         if (mainState.pgm === mleAddr) {
                                 pgmCascade.add(secState.pgm)
-                                pgmCascade.add(secState.pvw)
+                                if (self.config.verbose) {
+                                        const fmtAddr = (addr) => labels[addr] ? `${addr} (${labels[addr]})` : `${addr}`
+                                        self.log(
+                                                'info',
+                                                `Ross Vision Cascade: ${mle.toUpperCase()} (addr=${mleAddr}) is on ${mainMle.toUpperCase()} PGM -> adding ${mle.toUpperCase()} PGM=${fmtAddr(secState.pgm)} to PGM tally`
+                                        )
+                                }
                         }
 
                         if (mainState.pvw === mleAddr) {
-                                pvwCascade.add(secState.pgm)
                                 pvwCascade.add(secState.pvw)
+                                if (self.config.verbose) {
+                                        const fmtAddr = (addr) => labels[addr] ? `${addr} (${labels[addr]})` : `${addr}`
+                                        self.log(
+                                                'info',
+                                                `Ross Vision Cascade: ${mle.toUpperCase()} (addr=${mleAddr}) is on ${mainMle.toUpperCase()} PVW -> adding ${mle.toUpperCase()} PVW=${fmtAddr(secState.pvw)} to PVW tally`
+                                        )
+                                }
+                        }
+
+                        if (mainState.pgm !== mleAddr && mainState.pvw !== mleAddr) {
+                                if (self.config.verbose) {
+                                        self.log(
+                                                'debug',
+                                                `Ross Vision Cascade: ${mle.toUpperCase()} (addr=${mleAddr}) is NOT on ${mainMle.toUpperCase()} PGM(${mainState.pgm}) or PVW(${mainState.pvw}) -> no cascade`
+                                        )
+                                }
                         }
                 }
 
+                pgmCascade.delete(0)
+                pvwCascade.delete(0)
+
                 if (self.config.verbose) {
+                        const fmtSet = (s) => [...s].map((a) => labels[a] ? `${a} (${labels[a]})` : `${a}`).join(', ')
                         self.log(
                                 'info',
-                                `Ross Vision Cascade (main=${mainMle}): PGM sources=[${[...pgmCascade]}] PVW sources=[${[...pvwCascade]}]`
+                                `Ross Vision Tally Result: PGM=[${fmtSet(pgmCascade)}] | PVW=[${fmtSet(pvwCascade)}]`
                         )
                 }
 
@@ -514,9 +562,6 @@ function parseRossVisionPacket(self, buffer) {
                 pgmCascade.forEach((a) => allAddresses.add(a))
                 pvwCascade.forEach((a) => allAddresses.add(a))
 
-                pgmCascade.delete(0)
-                pvwCascade.delete(0)
-
                 for (const addr of allAddresses) {
                         const newTally2 = pgmCascade.has(addr) ? 1 : 0
                         const newTally1 = pvwCascade.has(addr) ? 1 : 0
@@ -526,8 +571,16 @@ function parseRossVisionPacket(self, buffer) {
                                 continue
                         }
 
-                        const labels = self.ROSS_LABELS || {}
                         const label = labels[addr] || `Source ${addr}`
+
+                        if (self.config.verbose) {
+                                const oldT1 = existing ? existing.tally1 : '-'
+                                const oldT2 = existing ? existing.tally2 : '-'
+                                self.log(
+                                        'info',
+                                        `Ross Vision Tally Change: addr=${addr} (${label}) PVW: ${oldT1}->${newTally1} | PGM: ${oldT2}->${newTally2}`
+                                )
+                        }
 
                         processTSLTallyObj(self, {
                                 address: addr,
@@ -543,7 +596,7 @@ function parseRossVisionPacket(self, buffer) {
                 self.checkFeedbacks()
         } else {
                 if (self.config.verbose) {
-                        self.log('debug', `Ross Vision: Ignoring packet of ${len} bytes`)
+                        self.log('debug', `Ross Vision: Ignoring packet of ${len} bytes (header: 0x${buffer[0].toString(16)} 0x${buffer[1].toString(16)})`)
                 }
         }
 }
