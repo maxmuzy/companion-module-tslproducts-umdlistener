@@ -413,23 +413,23 @@ function processRossVisionTCPData(self, data) {
                 } else if (b0 === 0xb1 && b1 === 0xb1) {
                         let nextHeader = findNextRossHeader(self.ROSS_TCP_BUFFER, 2)
 
-                        if (nextHeader === -1) {
-                                if (self.ROSS_TCP_BUFFER.length > 300) {
-                                        self.ROSS_TCP_BUFFER = self.ROSS_TCP_BUFFER.slice(1)
-                                        continue
+                        if (nextHeader !== -1) {
+                                const packet = self.ROSS_TCP_BUFFER.slice(0, nextHeader)
+                                self.ROSS_TCP_BUFFER = self.ROSS_TCP_BUFFER.slice(nextHeader)
+
+                                if (packet.length === 225) {
+                                        parseRossVisionPacket(self, packet)
+                                } else {
+                                        if (self.config.verbose) {
+                                                self.log('debug', `Ross Vision TCP: Skipping B1 packet of ${packet.length} bytes`)
+                                        }
                                 }
-                                break
-                        }
-
-                        const packet = self.ROSS_TCP_BUFFER.slice(0, nextHeader)
-                        self.ROSS_TCP_BUFFER = self.ROSS_TCP_BUFFER.slice(nextHeader)
-
-                        if (packet.length === 225) {
+                        } else if (self.ROSS_TCP_BUFFER.length >= 225) {
+                                const packet = self.ROSS_TCP_BUFFER.slice(0, 225)
+                                self.ROSS_TCP_BUFFER = self.ROSS_TCP_BUFFER.slice(225)
                                 parseRossVisionPacket(self, packet)
                         } else {
-                                if (self.config.verbose) {
-                                        self.log('debug', `Ross Vision TCP: Skipping B1 packet of ${packet.length} bytes`)
-                                }
+                                break
                         }
                 } else {
                         if (self.config.verbose) {
