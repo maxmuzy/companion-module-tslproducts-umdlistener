@@ -514,6 +514,9 @@ function parseRossVisionPacket(self, buffer) {
                 pgmCascade.forEach((a) => allAddresses.add(a))
                 pvwCascade.forEach((a) => allAddresses.add(a))
 
+                pgmCascade.delete(0)
+                pvwCascade.delete(0)
+
                 for (const addr of allAddresses) {
                         const newTally2 = pgmCascade.has(addr) ? 1 : 0
                         const newTally1 = pvwCascade.has(addr) ? 1 : 0
