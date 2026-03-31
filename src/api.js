@@ -507,12 +507,15 @@ function parseRossVisionPacket(self, buffer) {
                         }
                 }
 
-                const mainMle = self.config.ross_main_mle || 'mle1'
-                const mainState = self.ROSS_MLE_STATE[mainMle]
-                if (!mainState) {
-                        self.log('warn', `Ross Vision: Main MLE "${mainMle}" not found in state (configured ${mleCount} MLEs)`)
-                        return
+                let mainMle = self.config.ross_main_mle || 'mle1'
+                const mainNum = parseInt(mainMle.replace('mle', ''))
+                if (isNaN(mainNum) || mainNum < 1 || mainNum > mleCount) {
+                        if (self.config.verbose) {
+                                self.log('warn', `Ross Vision: Main MLE "${mainMle}" is out of range for ${mleCount} MLEs, defaulting to MLE1`)
+                        }
+                        mainMle = 'mle1'
                 }
+                const mainState = self.ROSS_MLE_STATE[mainMle]
 
                 const mleAddrMap = getRossMleAddrMap(self)
 
