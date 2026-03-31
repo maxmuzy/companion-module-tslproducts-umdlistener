@@ -39,7 +39,7 @@ This module is intended to run as a child process inside Bitfocus Companion usin
 - The module supports TSL protocols 3.1, 4.0, 5.0, and Ross Vision for tally data
 - V4.0 extends V3.1 with color tally info (OFF/RED/GREEN/AMBER) for LH, Text, and RH tallies on Display L and Display R
 - V4.0 includes checksum validation and XDATA parsing per the TSL UMD spec
-- Ross Vision protocol uses proprietary binary packets over UDP (port 9800): 21-byte label packets (0xC1 header) and 225-byte crosspoint status packets (0xB1 header). Tally is derived by inverse lookup of source addresses across MLE1/MLE2/MLE3 PGM/PVW crosspoints. MLE state variables expose which source is on PGM/PVW for each MLE bus. TCP transport includes reassembly buffering.
+- Ross Vision protocol uses proprietary binary packets over UDP (port 9800): 21-byte label packets (0xC1 header) and 225-byte crosspoint status packets (0xB1 header). Tally uses cascading logic: a configurable "Main MLE" drives tally output. Sources get PGM/PVW tally if they're directly on the Main MLE, or if they're active in a secondary MLE whose source address appears on the Main MLE's PGM/PVW. Config fields: Main MLE selector, MLE1/MLE2/MLE3 source addresses. A "Ross MLE Source Match" feedback allows comparing individual MLE bus crosspoints against specific source addresses. TCP transport includes reassembly buffering.
 - It opens UDP or TCP listeners on a configured port
 - Discovered tallies are stored in `this.TALLIES` and exposed as Companion variables/feedbacks
 - Ross Vision state is stored in `this.ROSS_MLE_STATE` (crosspoints per MLE) and `this.ROSS_LABELS` (source labels by address)

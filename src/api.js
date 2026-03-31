@@ -466,19 +466,57 @@ function parseRossVisionPacket(self, buffer) {
                         )
                 }
 
-                const pgmSources = new Set([mle1_pgm, mle2_pgm, mle3_pgm])
-                const pvwSources = new Set([mle1_pvw, mle2_pvw, mle3_pvw])
+                const mainMle = self.config.ross_main_mle || 'mle1'
+                const mainState = self.ROSS_MLE_STATE[mainMle]
+
+                const mleAddrMap = {
+                        mle1: parseInt(self.config.ross_mle1_addr) || 0,
+                        mle2: parseInt(self.config.ross_mle2_addr) || 0,
+                        mle3: parseInt(self.config.ross_mle3_addr) || 0,
+                }
+
+                const pgmCascade = new Set()
+                const pvwCascade = new Set()
+
+                pgmCascade.add(mainState.pgm)
+                pvwCascade.add(mainState.pvw)
+
+                const mleNames = ['mle1', 'mle2', 'mle3']
+                for (const mle of mleNames) {
+                        if (mle === mainMle) continue
+                        const mleAddr = mleAddrMap[mle]
+                        if (mleAddr === 0) continue
+
+                        const secState = self.ROSS_MLE_STATE[mle]
+
+                        if (mainState.pgm === mleAddr) {
+                                pgmCascade.add(secState.pgm)
+                                pgmCascade.add(secState.pvw)
+                        }
+
+                        if (mainState.pvw === mleAddr) {
+                                pvwCascade.add(secState.pgm)
+                                pvwCascade.add(secState.pvw)
+                        }
+                }
+
+                if (self.config.verbose) {
+                        self.log(
+                                'info',
+                                `Ross Vision Cascade (main=${mainMle}): PGM sources=[${[...pgmCascade]}] PVW sources=[${[...pvwCascade]}]`
+                        )
+                }
 
                 const allAddresses = new Set()
                 for (const t of self.TALLIES) {
                         allAddresses.add(t.address)
                 }
-                pgmSources.forEach((a) => allAddresses.add(a))
-                pvwSources.forEach((a) => allAddresses.add(a))
+                pgmCascade.forEach((a) => allAddresses.add(a))
+                pvwCascade.forEach((a) => allAddresses.add(a))
 
                 for (const addr of allAddresses) {
-                        const newTally2 = pgmSources.has(addr) ? 1 : 0
-                        const newTally1 = pvwSources.has(addr) ? 1 : 0
+                        const newTally2 = pgmCascade.has(addr) ? 1 : 0
+                        const newTally1 = pvwCascade.has(addr) ? 1 : 0
 
                         const existing = self.TALLIES.find((t) => t.address === addr)
                         if (existing && existing.tally1 === newTally1 && existing.tally2 === newTally2) {

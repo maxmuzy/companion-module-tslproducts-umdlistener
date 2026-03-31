@@ -122,6 +122,54 @@ module.exports = {
                         },
                 }
 
+                if (self.config.protocol === 'rossvision') {
+                        feedbacks['rossMleSourceMatch'] = {
+                                type: 'boolean',
+                                name: 'Ross MLE Source Match',
+                                description: 'Indicate if a specific MLE bus (PGM or PVW) has the selected source address as its active crosspoint',
+                                defaultStyle: {
+                                        color: foregroundColorWhite,
+                                        bgcolor: backgroundColorRed,
+                                },
+                                options: [
+                                        {
+                                                type: 'dropdown',
+                                                label: 'MLE Bus',
+                                                id: 'mleBus',
+                                                default: 'mle1_pgm',
+                                                choices: [
+                                                        { id: 'mle1_pgm', label: 'MLE1 PGM' },
+                                                        { id: 'mle1_pvw', label: 'MLE1 PVW' },
+                                                        { id: 'mle2_pgm', label: 'MLE2 PGM' },
+                                                        { id: 'mle2_pvw', label: 'MLE2 PVW' },
+                                                        { id: 'mle3_pgm', label: 'MLE3 PGM' },
+                                                        { id: 'mle3_pvw', label: 'MLE3 PVW' },
+                                                ],
+                                        },
+                                        {
+                                                type: 'dropdown',
+                                                label: 'Source Address',
+                                                id: 'address',
+                                                default: self.CHOICES_TALLYADDRESSES[0].id,
+                                                choices: self.CHOICES_TALLYADDRESSES,
+                                        },
+                                ],
+                                callback: function (feedback) {
+                                        let opt = feedback.options
+                                        if (!self.ROSS_MLE_STATE) return false
+
+                                        const parts = opt.mleBus.split('_')
+                                        const mleName = parts[0]
+                                        const busType = parts[1]
+
+                                        const mleState = self.ROSS_MLE_STATE[mleName]
+                                        if (!mleState) return false
+
+                                        return mleState[busType] === parseInt(opt.address)
+                                },
+                        }
+                }
+
                 self.setFeedbackDefinitions(feedbacks)
         },
 }
