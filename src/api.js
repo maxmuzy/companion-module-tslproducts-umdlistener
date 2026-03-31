@@ -537,6 +537,7 @@ function parseRossVisionPacket(self, buffer) {
                 }
 
                 self.checkVariables()
+                self.checkFeedbacks()
         } else {
                 if (self.config.verbose) {
                         self.log('debug', `Ross Vision: Ignoring packet of ${len} bytes`)
