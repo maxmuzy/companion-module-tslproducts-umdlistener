@@ -5,7 +5,7 @@ const crypto = require('crypto')
 const CONNECTION_ID = 'test-connection-' + crypto.randomBytes(4).toString('hex')
 const VERIFICATION_TOKEN = crypto.randomBytes(16).toString('hex')
 
-console.log('Starting TSL Products UMD Listener module...')
+console.log('Starting Serial Tally Listener module...')
 console.log(`Connection ID: ${CONNECTION_ID}`)
 
 const child = fork(path.join(__dirname, 'index.js'), [], {
@@ -21,7 +21,7 @@ const child = fork(path.join(__dirname, 'index.js'), [], {
 child.on('message', (msg) => {
 	if (msg && msg.direction === 'call' && msg.name === 'register') {
 		console.log('Module registered successfully with Companion host.')
-		console.log('Module is running and ready to receive TSL UMD tally data.')
+		console.log('Module is running and ready to receive Serial Tally data.')
 		child.send({
 			direction: 'response',
 			callId: msg.callId,

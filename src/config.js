@@ -9,7 +9,7 @@ module.exports = {
                                 width: 12,
                                 label: 'Information',
                                 value:
-                                        'This module listens to incoming TSL UMD data at the TCP or UDP port specified and updates Feedbacks and Variables accordingly.',
+                                        'This module listens to incoming Serial Tally data at the TCP or UDP port specified and updates Feedbacks and Variables accordingly.',
                         },
                         {
                                 type: 'number',
@@ -34,12 +34,9 @@ module.exports = {
                                 type: 'dropdown',
                                 id: 'protocol',
                                 width: 8,
-                                default: 'tsl3.1',
-                                label: 'TSL Protcol Version',
+                                default: 'rossvision',
+                                label: 'Product',
                                 choices: [
-                                        { id: 'tsl3.1', label: 'TSL 3.1' },
-                                        { id: 'tsl4.0', label: 'TSL 4.0' },
-                                        { id: 'tsl5.0', label: 'TSL 5.0' },
                                         { id: 'rossvision', label: 'Ross Vision' },
                                 ],
                         },
@@ -120,7 +117,7 @@ module.exports = {
                                 width: 6,
                                 label: 'Label Filter',
                                 tooltip: 'If the UMD label contains this text, remove it',
-                                default: ' (FSFC)',
+                                default: 'NONE',
                         },
                         {
                                 type: 'static-text',

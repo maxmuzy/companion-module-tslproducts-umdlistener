@@ -1,14 +1,14 @@
-# TSL Products UMD Listener - Bitfocus Companion Module
+# RossVideo Serial Tally Listener - Bitfocus Companion Module
 
 ## Overview
 
-This is a Bitfocus Companion module that listens for TSL UMD (Under Monitor Display) tally data via UDP or TCP, making that data available as variables and feedbacks within the Bitfocus Companion application.
+This is a Bitfocus Companion module that listens for Serial Tally UMD (Under Monitor Display) tally data via UDP or TCP, making that data available as variables and feedbacks within the Bitfocus Companion application.
 
 ## Project Structure
 
 - `index.js` - Main entry point; extends InstanceBase from @companion-module/base
 - `src/` - Core module logic
-  - `api.js` - Network communication (UDP/TCP) and TSL 3.1 / 5.0 packet parsing
+  - `api.js` - Network communication (UDP/TCP) and Serial Tally parsing
   - `config.js` - Configuration fields (port, protocol, etc.)
   - `actions.js` - User-triggerable actions
   - `feedbacks.js` - Feedback triggers based on tally states
@@ -36,9 +36,7 @@ This module is intended to run as a child process inside Bitfocus Companion usin
 
 ## Architecture Notes
 
-- The module supports TSL protocols 3.1, 4.0, 5.0, and Ross Vision for tally data
-- V4.0 extends V3.1 with color tally info (OFF/RED/GREEN/AMBER) for LH, Text, and RH tallies on Display L and Display R
-- V4.0 includes checksum validation and XDATA parsing per the TSL UMD spec
+- The module supports Ross Vision for tally data
 - Ross Vision protocol uses proprietary binary packets over UDP (port 9800):
   - 21-byte label packets (0xC1 header): address at byte 2, label at bytes 3-20
   - B1 status packets: size depends on MLE count — 74 + (N × 25) + 76 bytes (175/200/225 for 1-3 MLEs)

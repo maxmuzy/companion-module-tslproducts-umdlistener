@@ -1,16 +1,16 @@
 {
-	"id": "tslproducts-umdlistener",
-	"name": "tslproducts-umdlistener",
-	"shortname": "tslumd-listener",
-	"description": "Listens to incoming TSL UMD data.",
-	"version": "0.0.0",
+	"id": "rossvideo-serialtally",
+	"name": "Ross Video Serial Tally",
+	"shortname": "rossvideo-serialtally",
+	"description": "Listens to incoming Serial Tally data.",
+	"version": "1.0.0",
 	"license": "MIT",
-	"repository": "git+https://github.com/bitfocus/companion-module-tslproducts-umdlistener.git",
-	"bugs": "https://github.com/bitfocus/companion-module-tslproducts-umdlistener/issues",
+	"repository": "git+https://github.com/maxmuzy/companion-module-rossvideo-serialtally.git",
+	"bugs": "https://github.com/maxmuzy/companion-module-rossvideo-serialtally/issues",
 	"maintainers": [
 		{
-			"name": "Joseph Adams",
-			"email": "josephdadams@gmail.com"
+			"name": "Maxwell Muzy",
+			"email": "muzy2002-X@yahoo.com"
 		}
 	],
 	"legacyIds": [],
@@ -20,7 +20,7 @@
 		"apiVersion": "0.0.0",
 		"entrypoint": "../index.js"
 	},
-	"manufacturer": "TSL Products",
-	"products": ["UMD Listener"],
-	"keywords": ["UMD", "Tally"]
+	"manufacturer": "Ross Video",
+	"products": ["Serial Tally"],
+	"keywords": ["UMD", "Tally", "Serial", "Ross", "Vision"]
 }

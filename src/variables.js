@@ -1,4 +1,3 @@
-const TALLY_COLOR_NAMES = ['OFF', 'RED', 'GREEN', 'AMBER']
 
 module.exports = {
 	initVariables() {
@@ -37,63 +36,6 @@ module.exports = {
 				variableId: `tally_${self.TALLIES[i].address}_tally4`,
 			})
 
-			if (self.config.protocol == 'tsl5.0') {
-				variables.push({
-					name: `Tally ${self.TALLIES[i].address} RH Tally`,
-					variableId: `tally_${self.TALLIES[i].address}_rh_tally`,
-				})
-				variables.push({
-					name: `Tally ${self.TALLIES[i].address} Text Tally`,
-					variableId: `tally_${self.TALLIES[i].address}_text_tally`,
-				})
-				variables.push({
-					name: `Tally ${self.TALLIES[i].address} LH Tally`,
-					variableId: `tally_${self.TALLIES[i].address}_lh_tally`,
-				})
-				variables.push({
-					name: `Tally ${self.TALLIES[i].address} Brightness`,
-					variableId: `tally_${self.TALLIES[i].address}_brightness`,
-				})
-				variables.push({
-					name: `Tally ${self.TALLIES[i].address} Reserved`,
-					variableId: `tally_${self.TALLIES[i].address}_reserved`,
-				})
-				variables.push({
-					name: `Tally ${self.TALLIES[i].address} Control Data`,
-					variableId: `tally_${self.TALLIES[i].address}_control_data`,
-				})
-			}
-
-			if (self.config.protocol == 'tsl4.0') {
-				variables.push({
-					name: `Tally ${self.TALLIES[i].address} Brightness`,
-					variableId: `tally_${self.TALLIES[i].address}_brightness`,
-				})
-				variables.push({
-					name: `Tally ${self.TALLIES[i].address} LH Tally L`,
-					variableId: `tally_${self.TALLIES[i].address}_lh_tally_l`,
-				})
-				variables.push({
-					name: `Tally ${self.TALLIES[i].address} Text Tally L`,
-					variableId: `tally_${self.TALLIES[i].address}_text_tally_l`,
-				})
-				variables.push({
-					name: `Tally ${self.TALLIES[i].address} RH Tally L`,
-					variableId: `tally_${self.TALLIES[i].address}_rh_tally_l`,
-				})
-				variables.push({
-					name: `Tally ${self.TALLIES[i].address} LH Tally R`,
-					variableId: `tally_${self.TALLIES[i].address}_lh_tally_r`,
-				})
-				variables.push({
-					name: `Tally ${self.TALLIES[i].address} Text Tally R`,
-					variableId: `tally_${self.TALLIES[i].address}_text_tally_r`,
-				})
-				variables.push({
-					name: `Tally ${self.TALLIES[i].address} RH Tally R`,
-					variableId: `tally_${self.TALLIES[i].address}_rh_tally_r`,
-				})
-			}
 		}
 
 		if (self.config.protocol == 'rossvision') {
@@ -133,24 +75,6 @@ module.exports = {
 				variableObj[`tally_${self.TALLIES[i].address}_tally4`] =
 					parseInt(self.TALLIES[i].tally4) == 1 ? 'True' : 'False'
 
-				if (self.config.protocol == 'tsl5.0') {
-					variableObj[`tally_${self.TALLIES[i].address}_rh_tally`] = self.TALLIES[i].rh_tally
-					variableObj[`tally_${self.TALLIES[i].address}_text_tally`] = self.TALLIES[i].text_tally
-					variableObj[`tally_${self.TALLIES[i].address}_lh_tally`] = self.TALLIES[i].lh_tally
-					variableObj[`tally_${self.TALLIES[i].address}_brightness`] = self.TALLIES[i].brightness
-					variableObj[`tally_${self.TALLIES[i].address}_reserved`] = self.TALLIES[i].reserved
-					variableObj[`tally_${self.TALLIES[i].address}_control_data`] = self.TALLIES[i].control_data
-				}
-
-				if (self.config.protocol == 'tsl4.0') {
-					variableObj[`tally_${self.TALLIES[i].address}_brightness`] = self.TALLIES[i].brightness
-					variableObj[`tally_${self.TALLIES[i].address}_lh_tally_l`] = TALLY_COLOR_NAMES[self.TALLIES[i].lh_tally_l] || 'OFF'
-					variableObj[`tally_${self.TALLIES[i].address}_text_tally_l`] = TALLY_COLOR_NAMES[self.TALLIES[i].text_tally_l] || 'OFF'
-					variableObj[`tally_${self.TALLIES[i].address}_rh_tally_l`] = TALLY_COLOR_NAMES[self.TALLIES[i].rh_tally_l] || 'OFF'
-					variableObj[`tally_${self.TALLIES[i].address}_lh_tally_r`] = TALLY_COLOR_NAMES[self.TALLIES[i].lh_tally_r] || 'OFF'
-					variableObj[`tally_${self.TALLIES[i].address}_text_tally_r`] = TALLY_COLOR_NAMES[self.TALLIES[i].text_tally_r] || 'OFF'
-					variableObj[`tally_${self.TALLIES[i].address}_rh_tally_r`] = TALLY_COLOR_NAMES[self.TALLIES[i].rh_tally_r] || 'OFF'
-				}
 			}
 
 			if (self.config.protocol == 'rossvision' && self.ROSS_MLE_STATE) {

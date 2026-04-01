@@ -1,4 +1,4 @@
-// Sony-Bravia
+
 
 const { InstanceBase, InstanceStatus, runEntrypoint } = require('@companion-module/base')
 const UpgradeScripts = require('./src/upgrades')
