@@ -6,6 +6,10 @@
 		"test": "echo \"Error: no test specified\" && exit 1",
 		"format": "prettier -w ."
 	},
+	"author": "Maxwell Muzy <muzy2002-X@yahoo.com>",
+	"contributors": [
+		"Jasiel Netto <jasiel.netto@gmail.com>"
+	],
 	"license": "MIT",
 	"dependencies": {
 		"@companion-module/base": "^1.12.1"
